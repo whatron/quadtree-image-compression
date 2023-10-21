@@ -98,52 +98,94 @@ public class Utility {
         }
     }
 
-    /**
-     * Encodes the given list of simpleNodes into a string representation.
-     * Each simpleNode is represented as a comma-separated string of its x, y,
-     * width, height, and color values,
-     * with each value converted to a hexadecimal string.
-     * The string representation of each simpleNode is separated by a newline
-     * character.
-     *
-     * @param leafs the list of simpleNodes to encode
-     * @return the string representation of the encoded simpleNodes
-     */
-    public String encode(ArrayList<simpleNode> leafs) {
-        StringBuilder sb = new StringBuilder();
-        for (simpleNode leaf : leafs) {
-            sb.append(Integer.toHexString(leaf.x)).append(",").append(Integer.toHexString(leaf.y)).append(",")
-                    .append(Integer.toHexString(leaf.width)).append(",")
-                    .append(Integer.toHexString(leaf.height)).append(",").append(Integer.toHexString(leaf.color))
-                    .append("\n");
-        }
-        return sb.toString();
-    }
+    // Below is encoding for larger images(~4000x4000)
+    // public static String encode(ArrayList<simpleNode> leafs) throws IOException {
+    // ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    // for (simpleNode leaf : leafs) {
+    // // Write x, y, width, and height as 12-bit integers
+    // baos.write((byte) ((leaf.x >> 4) & 0xFF));
+    // baos.write((byte) ((leaf.x << 4) & 0xF0 | (leaf.y >> 8) & 0x0F));
+    // baos.write((byte) (leaf.y & 0xFF));
+    // baos.write((byte) ((leaf.width >> 4) & 0xFF));
+    // baos.write((byte) ((leaf.width << 4) & 0xF0 | (leaf.height >> 8) & 0x0F));
+    // baos.write((byte) (leaf.height & 0xFF));
+    // // Write color as a 24-bit integer
+    // baos.write((byte) ((leaf.color >> 16) & 0xFF));
+    // baos.write((byte) ((leaf.color >> 8) & 0xFF));
+    // baos.write((byte) (leaf.color & 0xFF));
+    // }
+    // return Base64.getEncoder().encodeToString(baos.toByteArray());
+    // }
 
     /**
-     * Decodes a CSV string into an ArrayList of simpleNode objects.
-     * Each line of the CSV string represents a simpleNode object, with
-     * comma-separated values
-     * for x, y, width, height, and color in hexadecimal format.
+     * Encodes an ArrayList of simpleNodes into a Base64-encoded string.
      * 
-     * @param csv the CSV string to decode
-     * @return an ArrayList of simpleNode objects
+     * @param leafs the ArrayList of simpleNodes to encode
+     * @return the Base64-encoded string
+     * @throws IOException if an I/O error occurs
      */
-    public ArrayList<simpleNode> decode(String csv) {
-        ArrayList<simpleNode> leafs = new ArrayList<>();
-        Scanner scanner = new Scanner(csv);
-        while (scanner.hasNextLine()) {
-            String line = scanner.nextLine();
-            String[] values = line.split(",");
-            int x = Integer.parseInt(values[0], 16);
-            int y = Integer.parseInt(values[1], 16);
-            int width = Integer.parseInt(values[2], 16);
-            int height = Integer.parseInt(values[3], 16);
-            int color = Integer.parseInt(values[4], 16);
-            simpleNode leaf = new simpleNode(x, y, width, height, color);
-            leafs.add(leaf);
+    public static String encode(ArrayList<simpleNode> leafs) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for (simpleNode leaf : leafs) {
+            // Write x, y, width, and height as 10-bit integers
+            baos.write((byte) ((leaf.x >> 2) & 0xFF));
+            baos.write((byte) ((leaf.x << 6) & 0xC0 | (leaf.y >> 4) & 0x3F));
+            baos.write((byte) ((leaf.y << 4) & 0xF0 | (leaf.width >> 6) & 0x0F));
+            baos.write((byte) ((leaf.width << 2) & 0xFC | (leaf.height >> 8) & 0x03));
+            baos.write((byte) (leaf.height & 0xFF));
+            // Write color as a 24-bit integer
+            baos.write((byte) ((leaf.color >> 16) & 0xFF));
+            baos.write((byte) ((leaf.color >> 8) & 0xFF));
+            baos.write((byte) (leaf.color & 0xFF));
         }
-        scanner.close();
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+
+    // Below is encoding for larger images(~4000x4000)
+    // public static ArrayList<simpleNode> decode(String encoded) throws IOException
+    // {
+    // ArrayList<simpleNode> leafs = new ArrayList<>();
+    // byte[] data = Base64.getDecoder().decode(encoded);
+    // for (int i = 0; i + 8 <= data.length; i += 9) {
+    // // Read x, y, width, and height as 12-bit integers
+    // int x = ((data[i] & 0xFF) << 4) | ((data[i + 1] >> 4) & 0x0F);
+    // int y = ((data[i + 1] & 0x0F) << 8) | (data[i + 2] & 0xFF);
+    // int width = ((data[i + 3] & 0xFF) << 4) | ((data[i + 4] >> 4) & 0x0F);
+    // int height = ((data[i + 4] & 0x0F) << 8) | (data[i + 5] & 0xFF);
+    // // Read color as a 24-bit integer
+    // int color = ((data[i + 6] & 0xFF) << 16) | ((data[i + 7] & 0xFF) << 8) |
+    // (data[i + 8] & 0xFF);
+    // leafs.add(new simpleNode(x, y, width, height, color));
+    // }
+    // return leafs;
+    // }
+    /**
+     * Decodes a Base64-encoded string into an ArrayList of simpleNodes.
+     * Each simpleNode represents a rectangular region of the image with a single
+     * color.
+     * The encoded string contains information about the x and y coordinates, width,
+     * height, and color of each region.
+     * The x, y, width, and height values are read as 10-bit integers, while the
+     * color value is read as a 24-bit integer.
+     * The decoded simpleNodes are added to an ArrayList and returned.
+     *
+     * @param encoded the Base64-encoded string to decode
+     * @return an ArrayList of simpleNodes representing the image regions
+     * @throws IOException if there is an error decoding the string
+     */
+    public static ArrayList<simpleNode> decode(String encoded) throws IOException {
+        ArrayList<simpleNode> leafs = new ArrayList<>();
+        byte[] data = Base64.getDecoder().decode(encoded);
+        for (int i = 0; i + 7 <= data.length; i += 8) {
+            // Read x, y, width, and height as 10-bit integers
+            int x = ((data[i] & 0xFF) << 2) | ((data[i + 1] >> 6) & 0x03);
+            int y = ((data[i + 1] & 0x3F) << 4) | ((data[i + 2] >> 4) & 0x0F);
+            int width = ((data[i + 2] & 0x0F) << 6) | ((data[i + 3] >> 2) & 0x3F);
+            int height = ((data[i + 3] & 0x03) << 8) | (data[i + 4] & 0xFF);
+            // Read color as a 24-bit integer
+            int color = ((data[i + 5] & 0xFF) << 16) | ((data[i + 6] & 0xFF) << 8) | (data[i + 7] & 0xFF);
+            leafs.add(new simpleNode(x, y, width, height, color));
+        }
         return leafs;
     }
 
@@ -276,7 +318,8 @@ public class Utility {
             int color2 = node.children[2].color;
             int color3 = node.children[3].color;
 
-            // if the color of the child nodes are within PERCENTAGE% of the average color of
+            // if the color of the child nodes are within PERCENTAGE% of the average color
+            // of
             // the node, then the node is a leaf
             if (Math.abs(((color0 >> 16) & 0xff) - ((node.color >> 16) & 0xff)) <= ((node.color >> 16) & 0xff)
                     * PERCENTAGE / 100
@@ -299,7 +342,7 @@ public class Utility {
                     && Math.abs((color2 & 0xff) - (node.color & 0xff)) <= ((node.color & 0xff) * PERCENTAGE / 100)
                     && Math.abs((color3 & 0xff) - (node.color & 0xff)) <= ((node.color & 0xff) * PERCENTAGE / 100)) {
                 node.children = null;
-                    }
+            }
         }
     }
 
@@ -313,16 +356,22 @@ public class Utility {
      */
     public void Compress(int[][][] pixels, String outputFileName) throws IOException {
         // maxDepth is the maximum depth of the quad tree, edit this to change the depth
-        int maxDepth = 9;
         // similarityPercent is the percentage of the average color of the node that the
         // color of the pixel must be within to be considered part of the node, edit
         // this to change the percentage
-        int similarityPercent = 5;
+        int maxDepth = 8;
+        int similarityPercent = 10;
 
         // create the quad tree with the pixels, maxDepth, and similarityPercent
         QuadTree quadtree = new QuadTree(pixels, maxDepth, similarityPercent);
+
+        // By calling the mergeSimilarNodes method multiple times on the root node, the
+        // loop is effectively merging similar nodes at different levels of the
+        // quadtree. This can help to further reduce the number of nodes in the quadtree
+        // and simplify the structure of the tree.
+        //seems to reduce the size of the compressed file by a bit
         Node rootNode = quadtree.getRoot();
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             quadtree.mergeSimilarNodes(rootNode);
         }
 
