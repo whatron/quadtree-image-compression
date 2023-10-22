@@ -6,11 +6,18 @@ import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
+import lib.ImagetoPixelConverter;
+import lib.MAECalculator;
+import lib.MSECalculator;
+import lib.PSNRCalculator;
+import lib.PixeltoImageConverter;
+import src.Utility;
+
 public class App {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
 
         // Create an instance of Utility
-        Utility Utility = new Utility();
+        Utility Utility = new Utility(8, 10);
 
         // Define original file directory to loop through
         String ImageDirectory = "Original/";
