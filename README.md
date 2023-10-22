@@ -16,3 +16,8 @@ The compressed files are then decompressed into the Decompressed Folder.
 The compression and decompression time, file size, and loss percentage will be displayed in the console.
 
 You can also specify the maximum depth of the quadtree and percentage node color variance in `Utility.java`.
+
+### Room for Improvement
+1. Store similar colors as an average of the same color
+2. Implement Huffman Coding
+3. Split encoding for nodes with smaller variables to save few bytes per node.
